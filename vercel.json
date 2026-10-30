@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/api/voice", "destination": "/api/voice.js" },
+    { "source": "/api/voices", "destination": "/api/voices.js" },
+    { "source": "/api/chatgpt", "destination": "/api/chatgpt.js" },
+    { "source": "/api/validate-llm", "destination": "/api/validate-llm.js" }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "name": "opus-studio-production",
+  "version": "1.2.0",
+  "description": "Estudio audiovisual con validacion de APIs y auto-poblacion de voces ai33.pro",
+  "main": "index.html",
+  "scripts": {
+    "start": "serve"
+  },
+  "dependencies": {}
+}

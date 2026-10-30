@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpusStudio - Video, Guión & Voz ai33.pro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    body { background-color: #080c14; color: #f1f5f9; font-family: system-ui, -apple-system, sans-serif; }
+    .glass { background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    .draggable-sub { cursor: grab; user-select: none; touch-action: none; }
+    .draggable-sub:active { cursor: grabbing; }
+    input[type=range] { accent-color: #06b6d4; }
+  </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+  <!-- Header -->
+  <header class="h-14 border-b border-slate-800 flex items-center justify-between px-6 glass shrink-0">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-cyan-500/20">OS</div>
+      <div>
+        <h1 class="font-bold text-sm tracking-wide text-white">OpusStudio <span class="text-xs px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800">ai33.pro + ChatGPT & Gemini</span></h1>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 text-xs">
+      <span id="badgeLLM" class="px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700">IA: Sin verificar</span>
+      <span id="badgeVoice" class="px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700">ai33.pro: Sin conectar</span>
+    </div>
+  </header>
+
+  <!-- Workspace -->
+  <div class="flex-1 flex overflow-hidden">
+    
+    <!-- Panel Izquierdo: Configuración, LLM, Guión y Voz -->
+    <aside class="w-96 border-r border-slate-800 p-5 flex flex-col gap-4 overflow-y-auto glass shrink-0">
+      
+      <!-- 1. Sección IA (Gemini / ChatGPT) con botón de test de conexión -->
+      <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col gap-2.5">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+            <span>🧠 Generador de Guión (IA)</span>
+          </label>
+          <select id="aiProviderSelect" class="bg-slate-950 text-cyan-400 border border-slate-700 rounded px-2 py-0.5 text-[11px] font-medium">
+            <option value="gemini">Google Gemini (1.5 Flash)</option>
+            <option value="openai">ChatGPT (GPT-4o Mini)</option>
+          </select>
+        </div>
+
+        <div class="flex gap-2">
+          <input type="password" id="aiApiKeyInput" placeholder="API Key de Gemini o ChatGPT..." class="flex-1 text-xs bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 focus:outline-none focus:border-cyan-500">
+          <button id="btnConnectLLM" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-300 text-xs font-medium transition-all shrink-0">
+            Conectar
+          </button>
+        </div>
+        <p id="msgLLM" class="text-[10px] text-slate-400 hidden"></p>
+        
+        <!-- Casilla: Experto de YT -->
+        <label class="flex items-start gap-2.5 pt-1.5 border-t border-slate-800 cursor-pointer select-none">
+          <input type="checkbox" id="chkYtExpert" class="mt-0.5 w-4 h-4 rounded bg-slate-950 border-slate-700 accent-cyan-500 cursor-pointer" checked>
+          <div class="flex flex-col">
+            <span class="text-xs font-semibold text-cyan-300 flex items-center gap-1">
+              Experto de YT
+              <span class="text-[9px] px-1.5 py-0.2 rounded bg-cyan-950/80 text-cyan-400 border border-cyan-800">Activo</span>
+            </span>
+            <span class="text-[10px] text-slate-400 leading-tight">Director viral, storyboarder y estratega de YouTube Shorts y videos largos.</span>
+          </div>
+        </label>
+      </div>
+
+      <!-- 2. API Key ai33.pro con BOTÓN CONECTAR y AUTO-POBLACIÓN DE VOCES -->
+      <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col gap-2.5">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+            <span>🎙️ API Key ai33.pro</span>
+          </label>
+          <span id="voiceCountBadge" class="text-[10px] text-cyan-400">4 voces base</span>
+        </div>
+        
+        <div class="flex gap-2">
+          <input type="password" id="apiKeyInput" placeholder="sk-..." class="flex-1 text-xs bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 focus:outline-none focus:border-cyan-500">
+          <button id="btnConnectVoice" class="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-medium transition-all shrink-0">
+            Conectar API
+          </button>
+        </div>
+        <p id="msgVoice" class="text-[10px] text-slate-400 hidden"></p>
+
+        <!-- Selector de Voces que se auto-actualiza -->
+        <div class="flex flex-col gap-1 pt-1 border-t border-slate-800/60">
+          <label class="text-[11px] text-slate-400">Voz seleccionada:</label>
+          <select id="voiceSelect" class="w-full bg-slate-950 text-slate-200 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-cyan-500">
+            <option value="es-ES-AlvaroNeural">Álvaro (Documental - España)</option>
+            <option value="es-ES-ElviraNeural">Elvira (Narrativa - España)</option>
+            <option value="es-MX-JorgeNeural">Jorge (Impacto - México)</option>
+            <option value="es-MX-DaliaNeural">Dalia (Dinámica - México)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 3. Guión / Prompt -->
+      <div class="flex-1 flex flex-col gap-2 min-h-[190px]">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-semibold text-slate-300">Tema o Guión Completo</label>
+          <span id="sceneCountTag" class="text-[10px] text-slate-400">0 escenas</span>
+        </div>
+        <textarea id="scriptInput" placeholder="Escribe un tema para que el 'Experto de YT' cree el guión, o pega tu guión ya redactado. Cada párrafo será una escena con su animación y locución..." class="w-full flex-1 p-3 text-xs bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-500 resize-none font-sans leading-relaxed"></textarea>
+      </div>
+
+      <!-- 4. Configuración Visual -->
+      <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col gap-3 text-xs">
+        <div class="flex items-center justify-between">
+          <span class="font-semibold text-slate-300">Estilo Visual</span>
+          <select id="styleSelect" class="bg-slate-950 text-slate-200 border border-slate-700 rounded px-2 py-1 text-[11px]">
+            <option value="cyber-doc">Documental Cyber / Hackeo (Estilo Video-Essay)</option>
+            <option value="keynote-3d">Keynote 3D Hardware & Procedural</option>
+            <option value="blueprint">Blueprint Técnico de Ingeniería</option>
+            <option value="data-story">Data Storytelling & Redes Complejas</option>
+            <option value="swiss">Swiss Motion Graphics</option>
+          </select>
+        </div>
+
+        <div class="flex items-center justify-between">
+          <span class="font-semibold text-slate-300">Formato</span>
+          <div class="flex gap-1.5">
+            <button id="ratio169" class="px-2.5 py-1 rounded bg-cyan-600 text-white font-medium text-[11px]">16:9</button>
+            <button id="ratio916" class="px-2.5 py-1 rounded bg-slate-800 text-slate-400 font-medium text-[11px]">9:16</button>
+          </div>
+        </div>
+
+        <!-- Subtítulos Hand Move -->
+        <div class="pt-2 border-t border-slate-800/80 flex flex-col gap-2">
+          <div class="flex items-center justify-between">
+            <span class="font-semibold text-slate-300">Subtítulos (Hand Move)</span>
+            <input type="checkbox" id="subToggle" class="accent-cyan-500 cursor-pointer">
+          </div>
+          <p class="text-[10px] text-slate-400">Si los activas, puedes arrastrarlos con la mano (✋) sobre el visor.</p>
+        </div>
+      </div>
+
+      <!-- Botón de Generación Principal -->
+      <button id="btnGenerate" class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-sm tracking-wide shadow-lg shadow-cyan-500/25 transition-all flex items-center justify-center gap-2">
+        <span id="btnIcon">⚡</span>
+        <span id="btnText">Comenzar generacion</span>
+      </button>
+
+    </aside>
+
+    <!-- Panel Derecho: Visor de Video y Controles -->
+    <main class="flex-1 flex flex-col p-6 items-center justify-center overflow-hidden">
+      
+      <!-- Contenedor del Visor -->
+      <div id="viewportContainer" class="relative w-full max-w-4xl aspect-video rounded-2xl overflow-hidden shadow-2xl border border-slate-800 bg-black flex items-center justify-center">
+        <canvas id="mainCanvas" class="w-full h-full block"></canvas>
+        
+        <!-- Subtítulo Flotante Draggable -->
+        <div id="subOverlay" class="absolute bottom-8 left-1/2 -translate-x-1/2 px-5 py-2.5 rounded-xl bg-black/80 backdrop-blur-md border border-white/10 text-white text-center text-sm font-semibold max-w-[85%] shadow-2xl draggable-sub hidden transition-transform hover:scale-[1.02]">
+          <span id="subText">Los subtítulos aparecerán aquí...</span>
+        </div>
+
+        <!-- Estado / Loading Overlay -->
+        <div id="loaderOverlay" class="absolute inset-0 bg-black/75 backdrop-blur-sm flex flex-col items-center justify-center gap-3 hidden z-20">
+          <div class="w-10 h-10 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
+          <p id="loaderStatus" class="text-xs text-cyan-300 font-medium">Procesando...</p>
+        </div>
+      </div>
+
+      <!-- Barra de Transporte / Scrubber -->
+      <div class="w-full max-w-4xl mt-5 glass rounded-xl p-3.5 flex flex-col gap-2.5">
+        <div class="flex items-center gap-3">
+          <span id="timeCurrent" class="text-xs font-mono text-cyan-400 w-12">00:00.0</span>
+          <input type="range" id="timeScrubber" min="0" max="100" value="0" step="0.1" class="flex-1 h-1.5 bg-slate-800 rounded-lg cursor-pointer">
+          <span id="timeTotal" class="text-xs font-mono text-slate-400 w-12 text-right">00:00.0</span>
+        </div>
+
+        <div class="flex items-center justify-between pt-1">
+          <div class="flex items-center gap-2">
+            <button id="btnPlayPause" class="px-3.5 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-all">
+              <span id="playIcon">▶️</span>
+              <span id="playText">Reproducir</span>
+            </button>
+            <button id="btnRewind" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs">⏪ -3s</button>
+            <button id="btnForward" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs">⏩ +3s</button>
+            <button id="btnReset" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs">🔄 Inicio</button>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button id="btnRecord" class="px-3.5 py-1.5 rounded-lg bg-red-600/90 hover:bg-red-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-lg shadow-red-600/20">
+              <span>🎥</span>
+              <span id="recText">Grabar Video MP4</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+  <script>
+    let scenes = [];
+    let currentSceneIdx = -1;
+    let isPlaying = false;
+    let isGenerating = false;
+    let startTime = 0;
+    let pausedTime = 0;
+    let totalDuration = 0;
+    let animId = null;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let isRecording = false;
+
+    const canvas = document.getElementById('mainCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const scriptInput = document.getElementById('scriptInput');
+    const aiProviderSelect = document.getElementById('aiProviderSelect');
+    const aiApiKeyInput = document.getElementById('aiApiKeyInput');
+    const btnConnectLLM = document.getElementById('btnConnectLLM');
+    const msgLLM = document.getElementById('msgLLM');
+    const badgeLLM = document.getElementById('badgeLLM');
+
+    const apiKeyInput = document.getElementById('apiKeyInput');
+    const btnConnectVoice = document.getElementById('btnConnectVoice');
+    const msgVoice = document.getElementById('msgVoice');
+    const badgeVoice = document.getElementById('badgeVoice');
+    const voiceSelect = document.getElementById('voiceSelect');
+    const voiceCountBadge = document.getElementById('voiceCountBadge');
+
+    const chkYtExpert = document.getElementById('chkYtExpert');
+    const styleSelect = document.getElementById('styleSelect');
+    const btnGenerate = document.getElementById('btnGenerate');
+    const btnPlayPause = document.getElementById('btnPlayPause');
+    const btnRewind = document.getElementById('btnRewind');
+    const btnForward = document.getElementById('btnForward');
+    const btnReset = document.getElementById('btnReset');
+    const btnRecord = document.getElementById('btnRecord');
+    const timeScrubber = document.getElementById('timeScrubber');
+    const timeCurrent = document.getElementById('timeCurrent');
+    const timeTotal = document.getElementById('timeTotal');
+    const playIcon = document.getElementById('playIcon');
+    const playText = document.getElementById('playText');
+    const subOverlay = document.getElementById('subOverlay');
+    const subText = document.getElementById('subText');
+    const subToggle = document.getElementById('subToggle');
+    const loaderOverlay = document.getElementById('loaderOverlay');
+    const loaderStatus = document.getElementById('loaderStatus');
+    const sceneCountTag = document.getElementById('sceneCountTag');
+    const viewportContainer = document.getElementById('viewportContainer');
+
+    function resizeCanvas() {
+      const rect = viewportContainer.getBoundingClientRect();
+      canvas.width = rect.width * window.devicePixelRatio;
+      canvas.height = rect.height * window.devicePixelRatio;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    scriptInput.addEventListener('input', () => {
+      const text = scriptInput.value.trim();
+      const rawScenes = text ? text.split(/\n\s*\n+/).filter(s => s.trim().length > 0) : [];
+      sceneCountTag.textContent = `${rawScenes.length} escenas detectadas`;
+    });
+
+    // --- 1. BOTÓN CONECTAR API DE IA (GEMINI / CHATGPT) ---
+    btnConnectLLM.addEventListener('click', async () => {
+      const provider = aiProviderSelect.value;
+      const apiKey = aiApiKeyInput.value.trim();
+
+      if (!apiKey) {
+        showStatus(msgLLM, '⚠️ Ingresa una API Key para validar', 'text-amber-400');
+        return;
+      }
+
+      btnConnectLLM.disabled = true;
+      btnConnectLLM.textContent = 'Verificando...';
+
+      try {
+        const res = await fetch('/api/validate-llm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ provider, apiKey })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          showStatus(msgLLM, `✅ Conectado con éxito: ${data.message}`, 'text-emerald-400');
+          badgeLLM.textContent = `IA: ${provider === 'gemini' ? 'Gemini Activo' : 'ChatGPT Activo'}`;
+          badgeLLM.className = 'px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800';
+        } else {
+          showStatus(msgLLM, `❌ Error de conexión: ${data.error}`, 'text-rose-400');
+          badgeLLM.textContent = 'IA: Error de clave';
+          badgeLLM.className = 'px-2.5 py-1 rounded-full bg-rose-950 text-rose-300 border border-rose-800';
+        }
+      } catch (err) {
+        showStatus(msgLLM, `❌ Fallo de red: ${err.message}`, 'text-rose-400');
+      } finally {
+        btnConnectLLM.disabled = false;
+        btnConnectLLM.textContent = 'Conectar';
+      }
+    });
+
+    // --- 2. BOTÓN CONECTAR API DE AI33.PRO Y AUTO-POBLAR VOCES ---
+    btnConnectVoice.addEventListener('click', async () => {
+      const apiKey = apiKeyInput.value.trim();
+
+      if (!apiKey) {
+        showStatus(msgVoice, '⚠️ Ingresa la API Key de ai33.pro', 'text-amber-400');
+        return;
+      }
+
+      btnConnectVoice.disabled = true;
+      btnConnectVoice.textContent = 'Conectando...';
+
+      try {
+        const res = await fetch('/api/voices', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ apiKey })
+        });
+        const data = await res.json();
+
+        if (data.success && data.voices) {
+          showStatus(msgVoice, `✅ Conexión exitosa: Se agregaron ${data.voices.length} voces disponibles`, 'text-emerald-400');
+          badgeVoice.textContent = `ai33.pro: Conectado (${data.voices.length} voces)`;
+          badgeVoice.className = 'px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800';
+          voiceCountBadge.textContent = `${data.voices.length} voces sincronizadas`;
+
+          // Auto-poblar el <select> con todas las voces reales de ai33.pro
+          voiceSelect.innerHTML = '';
+          data.voices.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v.id || v.name;
+            opt.textContent = v.name || v.id;
+            voiceSelect.appendChild(opt);
+          });
+        } else {
+          showStatus(msgVoice, `❌ Error: ${data.error || 'Clave de ai33.pro rechazada'}`, 'text-rose-400');
+          badgeVoice.textContent = 'ai33.pro: Error';
+          badgeVoice.className = 'px-2.5 py-1 rounded-full bg-rose-950 text-rose-300 border border-rose-800';
+        }
+      } catch (err) {
+        showStatus(msgVoice, `❌ Fallo al conectar: ${err.message}`, 'text-rose-400');
+      } finally {
+        btnConnectVoice.disabled = false;
+        btnConnectVoice.textContent = 'Conectar API';
+      }
+    });
+
+    function showStatus(element, text, colorClass) {
+      element.className = `text-[10px] ${colorClass}`;
+      element.textContent = text;
+      element.classList.remove('hidden');
+    }
+
+    // Proporciones 16:9 / 9:16
+    document.getElementById('ratio169').addEventListener('click', () => {
+      viewportContainer.classList.remove('aspect-[9/16]');
+      viewportContainer.classList.add('aspect-video');
+      document.getElementById('ratio169').className = "px-2.5 py-1 rounded bg-cyan-600 text-white font-medium text-[11px]";
+      document.getElementById('ratio916').className = "px-2.5 py-1 rounded bg-slate-800 text-slate-400 font-medium text-[11px]";
+      setTimeout(resizeCanvas, 50);
+    });
+
+    document.getElementById('ratio916').addEventListener('click', () => {
+      viewportContainer.classList.remove('aspect-video');
+      viewportContainer.classList.add('aspect-[9/16]');
+      document.getElementById('ratio916').className = "px-2.5 py-1 rounded bg-cyan-600 text-white font-medium text-[11px]";
+      document.getElementById('ratio169').className = "px-2.5 py-1 rounded bg-slate-800 text-slate-400 font-medium text-[11px]";
+      setTimeout(resizeCanvas, 50);
+    });
+
+    // Subtítulos Hand Move
+    let isDragging = false;
+    let startX, startY, initLeft, initTop;
+
+    subOverlay.addEventListener('pointerdown', (e) => {
+      isDragging = true;
+      subOverlay.setPointerCapture(e.pointerId);
+      startX = e.clientX;
+      startY = e.clientY;
+      const rect = subOverlay.getBoundingClientRect();
+      const parentRect = viewportContainer.getBoundingClientRect();
+      initLeft = rect.left - parentRect.left;
+      initTop = rect.top - parentRect.top;
+      subOverlay.style.left = `${initLeft}px`;
+      subOverlay.style.top = `${initTop}px`;
+      subOverlay.style.bottom = 'auto';
+      subOverlay.style.transform = 'none';
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (!isDragging) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      subOverlay.style.left = `${Math.max(10, initLeft + dx)}px`;
+      subOverlay.style.top = `${Math.max(10, initTop + dy)}px`;
+    });
+
+    window.addEventListener('pointerup', () => { isDragging = false; });
+    subToggle.addEventListener('change', () => {
+      subOverlay.classList.toggle('hidden', !subToggle.checked);
+    });
+
+    async function requestAiScript(promptText) {
+      const provider = aiProviderSelect.value;
+      const apiKey = aiApiKeyInput.value.trim();
+      const isYtExpert = chkYtExpert.checked;
+
+      const response = await fetch('/api/chatgpt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: promptText, provider, apiKey, isYtExpert })
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al conectar con la IA');
+      }
+
+      const data = await response.json();
+      return data.script;
+    }
+
+    async function generateVoiceForScene(text, voice, apiKey) {
+      try {
+        const response = await fetch('/api/voice', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, voice, apiKey })
+        });
+        
+        if (!response.ok) throw new Error('ai33.pro offline');
+
+        const blob = await response.blob();
+        const audioUrl = URL.createObjectURL(blob);
+        const audio = new Audio(audioUrl);
+
+        return new Promise((resolve) => {
+          audio.addEventListener('loadedmetadata', () => {
+            resolve({ audio, duration: Math.max(3, audio.duration), text });
+          });
+          audio.addEventListener('error', () => {
+            resolve({ audio: null, duration: Math.max(4, text.length * 0.065), text });
+          });
+        });
+      } catch (err) {
+        return { audio: null, duration: Math.max(4, text.length * 0.065), text };
+      }
+    }
+
+    // --- PROCESO PRINCIPAL: COMENZAR GENERACIÓN ---
+    btnGenerate.addEventListener('click', async () => {
+      let text = scriptInput.value.trim();
+      if (!text) {
+        alert('Por favor escribe un tema o pega un guión antes de generar.');
+        return;
+      }
+
+      isGenerating = true;
+      loaderOverlay.classList.remove('hidden');
+
+      const isShortPrompt = text.split(/\s+/).length < 25;
+      const providerName = aiProviderSelect.value === 'gemini' ? 'Google Gemini' : 'ChatGPT';
+
+      if (isShortPrompt || chkYtExpert.checked) {
+        loaderStatus.textContent = `Generando guión con ${providerName} (Modo: Experto de YT)...`;
+        try {
+          const aiGeneratedScript = await requestAiScript(text);
+          if (aiGeneratedScript) {
+            text = aiGeneratedScript.trim();
+            scriptInput.value = text;
+          }
+        } catch (e) {
+          console.warn('Procediendo con el texto ingresado:', e);
+        }
+      }
+
+      const paragraphs = text.split(/\n\s*\n+/).filter(p => p.trim().length > 0);
+      if (paragraphs.length === 0) {
+        loaderOverlay.classList.add('hidden');
+        return;
+      }
+
+      stopPlayback();
+      scenes = [];
+      let accumulatedTime = 0;
+
+      const voice = voiceSelect.value;
+      const apiKey = apiKeyInput.value.trim();
+
+      for (let i = 0; i < paragraphs.length; i++) {
+        loaderStatus.textContent = `Sintetizando escena ${i + 1} de ${paragraphs.length} con ai33.pro...`;
+        const clipData = await generateVoiceForScene(paragraphs[i], voice, apiKey);
+        
+        scenes.push({
+          index: i,
+          text: paragraphs[i],
+          start: accumulatedTime,
+          end: accumulatedTime + clipData.duration,
+          duration: clipData.duration,
+          audio: clipData.audio
+        });
+
+        accumulatedTime += clipData.duration;
+      }
+
+      totalDuration = accumulatedTime;
+      timeTotal.textContent = formatTime(totalDuration);
+      timeScrubber.max = totalDuration;
+      timeScrubber.value = 0;
+
+      loaderOverlay.classList.add('hidden');
+      isGenerating = false;
+
+      startPlayback();
+    });
+
+    function formatTime(s) {
+      const m = Math.floor(s / 60);
+      const sec = Math.floor(s % 60);
+      const dec = Math.floor((s % 1) * 10);
+      return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}.${dec}`;
+    }
+
+    function startPlayback() {
+      if (scenes.length === 0) return;
+      isPlaying = true;
+      playIcon.textContent = '⏸️';
+      playText.textContent = 'Pausar';
+      startTime = performance.now() - (pausedTime * 1000);
+      tick();
+    }
+
+    function stopPlayback() {
+      isPlaying = false;
+      playIcon.textContent = '▶️';
+      playText.textContent = 'Reproducir';
+      if (animId) cancelAnimationFrame(animId);
+      scenes.forEach(s => {
+        if (s.audio) s.audio.pause();
+      });
+    }
+
+    function seekTo(targetSec) {
+      targetSec = Math.max(0, Math.min(totalDuration, targetSec));
+      pausedTime = targetSec;
+      timeScrubber.value = targetSec;
+      timeCurrent.textContent = formatTime(targetSec);
+      
+      scenes.forEach(s => {
+        if (s.audio) {
+          if (targetSec >= s.start && targetSec < s.end) {
+            s.audio.currentTime = targetSec - s.start;
+            if (isPlaying) s.audio.play();
+          } else {
+            s.audio.pause();
+          }
+        }
+      });
+
+      if (isPlaying) {
+        startTime = performance.now() - (targetSec * 1000);
+      } else {
+        renderFrame(targetSec);
+      }
+    }
+
+    btnPlayPause.addEventListener('click', () => {
+      if (isPlaying) {
+        pausedTime = (performance.now() - startTime) / 1000;
+        stopPlayback();
+      } else {
+        startPlayback();
+      }
+    });
+
+    btnRewind.addEventListener('click', () => seekTo(pausedTime - 3));
+    btnForward.addEventListener('click', () => seekTo(pausedTime + 3));
+    btnReset.addEventListener('click', () => seekTo(0));
+
+    timeScrubber.addEventListener('input', (e) => {
+      seekTo(parseFloat(e.target.value));
+    });
+
+    function tick() {
+      if (!isPlaying) return;
+      const now = performance.now();
+      const currentSec = (now - startTime) / 1000;
+      pausedTime = currentSec;
+
+      if (currentSec >= totalDuration) {
+        stopPlayback();
+        seekTo(totalDuration);
+        if (isRecording) stopRecording();
+        return;
+      }
+
+      timeCurrent.textContent = formatTime(currentSec);
+      timeScrubber.value = currentSec;
+
+      const activeIdx = scenes.findIndex(s => currentSec >= s.start && currentSec < s.end);
+      if (activeIdx !== -1 && activeIdx !== currentSceneIdx) {
+        currentSceneIdx = activeIdx;
+        const currentScene = scenes[currentSceneIdx];
+        
+        if (currentScene.audio) {
+          currentScene.audio.currentTime = 0;
+          currentScene.audio.play().catch(e => console.warn(e));
+        }
+
+        subText.textContent = currentScene.text;
+      }
+
+      renderFrame(currentSec);
+      animId = requestAnimationFrame(tick);
+    }
+
+    function renderFrame(time) {
+      const w = canvas.width;
+      const h = canvas.height;
+      const style = styleSelect.value;
+      const activeScene = scenes[currentSceneIdx] || { index: 0, text: '' };
+
+      ctx.save();
+      ctx.fillStyle = '#050811';
+      ctx.fillRect(0, 0, w, h);
+
+      if (style === 'cyber-doc') {
+        drawCyberDoc(w, h, time, activeScene);
+      } else if (style === 'keynote-3d') {
+        drawKeynote3D(w, h, time, activeScene);
+      } else if (style === 'blueprint') {
+        drawBlueprint(w, h, time, activeScene);
+      } else if (style === 'data-story') {
+        drawDataStory(w, h, time, activeScene);
+      } else {
+        drawSwissMotion(w, h, time, activeScene);
+      }
+
+      ctx.restore();
+    }
+
+    function drawCyberDoc(w, h, time, scene) {
+      ctx.strokeStyle = 'rgba(6, 182, 212, 0.08)';
+      ctx.lineWidth = 1;
+      const step = 40;
+      for (let x = 0; x < w; x += step) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+      }
+      for (let y = 0; y < h; y += step) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+      }
+
+      const cx = w / 2;
+      const cy = h / 2;
+      const nodesCount = 48;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(time * 0.15);
+
+      for (let i = 0; i < nodesCount; i++) {
+        const angle = (i / nodesCount) * Math.PI * 2;
+        const radius = 120 + Math.sin(time * 2 + i) * 35;
+        const nx = Math.cos(angle) * radius;
+        const ny = Math.sin(angle) * radius;
+
+        ctx.strokeStyle = `rgba(14, 165, 233, ${0.15 + Math.sin(time * 3 + i) * 0.1})`;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(nx, ny);
+        ctx.stroke();
+
+        ctx.fillStyle = i % 4 === 0 ? '#ef4444' : '#06b6d4';
+        ctx.beginPath();
+        ctx.arc(nx, ny, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = '11px monospace';
+      ctx.fillText(`PRODUCCIÓN AUDIOVISUAL // EXPERTO DE YT`, 30, 40);
+      ctx.fillText(`STATUS: ESCENA ACTIVA // 60 FPS`, 30, 60);
+      ctx.fillText(`TIMESTAMP: ${formatTime(time)}`, 30, 80);
+
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.fillRect(30, h - 90, w - 60, 60);
+      ctx.strokeStyle = '#1e293b';
+      ctx.strokeRect(30, h - 90, w - 60, 60);
+
+      ctx.fillStyle = '#a5f3fc';
+      ctx.font = '12px monospace';
+      ctx.fillText(`$ yt_director --mode=storytelling --scene=${scene.index + 1}`, 45, h - 65);
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText(`> Locución sincronizada con ai33.pro activa`, 45, h - 45);
+    }
+
+    function drawKeynote3D(w, h, time, scene) {
+      const cx = w / 2;
+      const cy = h / 2;
+      ctx.save();
+      ctx.translate(cx, cy);
+
+      for (let i = 1; i <= 3; i++) {
+        ctx.strokeStyle = `rgba(99, 102, 241, ${0.4 / i})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 160 * i * 0.5, 70 * i * 0.5, time * 0.5 * (i % 2 === 0 ? 1 : -1), 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      const gradient = ctx.createRadialGradient(0, 0, 5, 0, 0, 60);
+      gradient.addColorStop(0, '#ffffff');
+      gradient.addColorStop(0.3, '#06b6d4');
+      gradient.addColorStop(1, 'transparent');
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(0, 0, 60, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = '12px system-ui';
+      ctx.fillText(`TOMA 3D // ESCENA ${scene.index + 1}`, 40, 40);
+    }
+
+    function drawBlueprint(w, h, time, scene) {
+      ctx.fillStyle = '#0a192f';
+      ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = '#172a45';
+      ctx.lineWidth = 1;
+
+      for (let x = 0; x < w; x += 30) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+      }
+      for (let y = 0; y < h; y += 30) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+      }
+
+      ctx.strokeStyle = '#64ffda';
+      ctx.strokeRect(w * 0.2, h * 0.2, w * 0.6, h * 0.6);
+      ctx.fillStyle = '#64ffda';
+      ctx.font = '11px monospace';
+      ctx.fillText(`TECHNICAL SPECIFICATION // SECTION 0${scene.index + 1}`, w * 0.2 + 10, h * 0.2 + 25);
+    }
+
+    function drawDataStory(w, h, time, scene) {
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let x = 0; x < w; x += 10) {
+        const y = h / 2 + Math.sin(x * 0.02 + time * 3) * 60 + Math.cos(x * 0.01 + time) * 30;
+        if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      ctx.fillStyle = '#10b981';
+      ctx.font = '14px monospace';
+      ctx.fillText(`DATA FLUCTUATION RATE: ${(Math.sin(time) * 40 + 60).toFixed(2)}%`, 40, 50);
+    }
+
+    function drawSwissMotion(w, h, time, scene) {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.fillStyle = '#000000';
+      const offset = (time * 100) % w;
+      ctx.fillRect(0, 0, offset, h);
+
+      ctx.fillStyle = '#e11d48';
+      ctx.beginPath();
+      ctx.arc(w / 2, h / 2, 80 + Math.sin(time * 4) * 20, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    btnRecord.addEventListener('click', () => {
+      if (isRecording) {
+        stopRecording();
+      } else {
+        startRecording();
+      }
+    });
+
+    function startRecording() {
+      if (scenes.length === 0) {
+        alert('Genera primero un guión antes de grabar.');
+        return;
+      }
+      recordedChunks = [];
+      const stream = canvas.captureStream(60);
+      
+      const options = { mimeType: 'video/webm;codecs=vp9' };
+      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+        options.mimeType = 'video/webm';
+      }
+
+      mediaRecorder = new MediaRecorder(stream, options);
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) recordedChunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `video-opus-${Date.now()}.webm`;
+        a.click();
+        btnRecord.classList.remove('bg-amber-600');
+        btnRecord.classList.add('bg-red-600/90');
+        document.getElementById('recText').textContent = 'Grabar Video MP4';
+      };
+
+      mediaRecorder.start();
+      isRecording = true;
+      btnRecord.classList.remove('bg-red-600/90');
+      btnRecord.classList.add('bg-amber-600');
+      document.getElementById('recText').textContent = 'Detener y Guardar';
+
+      seekTo(0);
+      startPlayback();
+    }
+
+    function stopRecording() {
+      if (!isRecording) return;
+      isRecording = false;
+      mediaRecorder.stop();
+    }
+  </script>
+</body>
+</html>
